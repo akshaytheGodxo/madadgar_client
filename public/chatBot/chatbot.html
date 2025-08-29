@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Chatbot</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', 'sans-serif';
+            background-color: #f0f2f5;
+        }
+        .chat-container {
+            max-width: 600px;
+            margin: 20px auto;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 80vh; /* Ensure it takes a good portion of the viewport */
+        }
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem; /* p-5 */
+            background-color: #2563eb; /* bg-blue-600 */
+            color: white;
+            font-size: 1.5rem; /* text-2xl */
+            font-weight: bold;
+            border-top-left-radius: 1rem; /* rounded-t-xl */
+            border-top-right-radius: 1rem; /* rounded-t-xl */
+        }
+        .chat-messages {
+            flex-grow: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            background-color: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .message {
+            max-width: 80%;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            line-height: 1.4;
+        }
+        .message.user {
+            background-color: #e0f2fe; /* Light blue */
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        .message.bot {
+            background-color: #f1f5f9; /* Light gray */
+            align-self: flex-start;
+            margin-right: auto;
+        }
+        .loading-indicator {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            color: #64748b;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6; /* Blue */
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Custom styles for the weather card based on the template */
+        .weather-card {
+            background: linear-gradient(to right bottom, #4b4f53de, #48505d); /* Blue gradient */
+            color: white;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+        .weather-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.875rem; /* text-sm */
+        }
+        .weather-header span {
+            display: flex;
+            align-items: center;
+        }
+        .weather-current {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 1rem;
+        }
+        .weather-current-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .weather-temp {
+            font-size: 4rem; /* text-6xl */
+            font-weight: bold;
+            line-height: 1;
+        }
+        .weather-icon {
+            font-size: 3rem; /* text-5xl */
+            line-height: 1;
+        }
+        .weather-description {
+            font-size: 1.25rem; /* text-xl */
+            text-transform: capitalize;
+            text-align: center;
+            margin-top: 0.5rem;
+        }
+        .weather-forecast-days {
+            background-color: rgba(255, 255, 255, 0.2); /* Slightly transparent white */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .weather-day-forecast {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Custom styles for the precaution card */
+        .precaution-card {
+            background: linear-gradient(to right bottom, #fde047, #facc15); /* Yellow gradient */
+            color: #333; /* Darker text for contrast on yellow */
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        .precaution-card strong {
+            font-weight: bold;
+        }
+        .precaution-card ul {
+            list-style: disc;
+            margin-left: 1.25rem;
+            margin-top: 0.5rem;
+        }
+        .precaution-card li {
+            margin-bottom: 0.25rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+
+    <div class="chat-container bg-white rounded-xl shadow-lg w-full md:w-3/4 lg:w-1/2">
+        <div class="chat-header">
+            <span>MadadGaar </span>
+            <!-- Language selector removed -->
+        </div>
+
+        <div id="chat-messages" class="chat-messages flex-1 overflow-y-auto p-4 space-y-4">
+            <!-- Initial welcome message -->
+            <div class="message bot">Hello! I can give you the current weather and a 4-day forecast for any city, state, or country. You can also ask about precautions or weather news links. What location are you interested in?</div>
+        </div>
+
+        <div id="loading-indicator" class="loading-indicator hidden">
+            <div class="spinner mr-3"></div>
+            <span id="loading-text">Typing...</span>
+        </div>
+
+        <div class="chat-input p-4 border-t border-gray-200 flex items-center bg-white rounded-b-xl">
+            <input type="text" id="user-input" placeholder="Ask about weather, precautions, or news links..."
+                   class="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mr-3">
+            <button id="send-button"
+                    class="bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200">
+                Send
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const loadingText = document.getElementById('loading-text');
+
+        let chatHistory = [{ role: "model", parts: [{ text: "Hello! I can give you the current weather and a 4-day forecast for any city, state, or country. You can also ask about precautions or weather news links. What location are you interested in?" }] }];
+
+        // API Key for Gemini. Leave empty as Canvas will provide it at runtime.
+        const GEMINI_API_KEY = "AIzaSyDRebEpVtR2fr3PoiUESXxwP__CbtJjRp4";
+        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
+
+        // IMPORTANT: Your actual OpenWeatherMap API key.
+        const OPENWEATHER_API_KEY = '8ed415630504dcebe83d207b0422869b'; // User-provided API Key
+
+        // --- Utility Functions ---
+
+        /**
+         * Maps OpenWeatherMap description to a simple icon/emoji.
+         * This is a simplified mapping; more comprehensive icon sets could be used.
+         * @param {string} description - OpenWeatherMap weather description.
+         * @returns {string} - Corresponding emoji.
+         */
+        function getWeatherEmoji(description) {
+            if (!description) return '❓';
+            const desc = description.toLowerCase();
+            if (desc.includes('clear')) return '☀️';
+            if (desc.includes('cloud')) return '☁️';
+            if (desc.includes('rain') || desc.includes('drizzle')) return '🌧️';
+            if (desc.includes('thunderstorm')) return '⛈️';
+            if (desc.includes('snow')) return '❄️';
+            if (desc.includes('mist') || desc.includes('fog')) return '🌫️';
+            return '🌡️'; // Default
+        }
+
+        /**
+         * Formats weather data into an HTML template string.
+         * @param {string} locationName - The full name of the location.
+         * @param {object} current - Current weather data.
+         * @param {Array<object>} fourDayForecast - Array of daily forecasts for the next 4 days.
+         * @returns {string} - HTML string representing the weather card.
+         */
+        function formatWeatherAsTemplate(locationName, current, fourDayForecast) {
+            const currentMinMaxDisplay = current.minMaxTemp ? `${Math.round(current.minMaxTemp.min)}°↓ ${Math.round(current.minMaxTemp.max)}°↑` : '';
+
+            // Generate HTML for the 4-day forecast
+            const forecastDaysHtml = fourDayForecast.map(day => {
+                const dayName = new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' });
+                const minMaxTempDisplay = day.minMaxTemp ? `${Math.round(day.minMaxTemp.min)}°↓ ${Math.round(day.minMaxTemp.max)}°↑` : '';
+                return `
+                    <div class="weather-day-forecast">
+                        <span>${dayName.toUpperCase()}</span>
+                        <span>${getWeatherEmoji(day.description)}</span>
+                        <span>${Math.round(day.temperature)}°</span>
+                        <span class="text-xs opacity-80">${minMaxTempDisplay}</span>
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <div class="weather-card">
+                    <div class="weather-header">
+                        <span class="text-xl font-semibold">${locationName.toUpperCase()}</span>
+                        <span>${currentMinMaxDisplay}</span>
+                    </div>
+                    <div class="weather-current flex items-center justify-between">
+                        <div class="weather-current-details">
+                            <div class="text-sm">${new Date().toLocaleDateString('en-US', { weekday: 'long' })}</div>
+                            <div class="text-xs opacity-80">${new Date().toLocaleDateString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
+                            <div class="text-xs opacity-80">Wind ${current.windSpeed}km/h</div>
+                            <div class="text-xs opacity-80">💧 Humidity ${current.humidity}%</div>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="weather-icon mr-2">${getWeatherEmoji(current.description)}</span>
+                            <span class="weather-temp">${Math.round(current.temperature)}°</span>
+                        </div>
+                    </div>
+                    <div class="weather-description">${current.description}</div>
+
+                    <div class="weather-forecast-days">
+                        ${fourDayForecast.length > 0 ? forecastDaysHtml : '<div class="text-sm text-center mt-2 opacity-80">4-day forecast not available.</div>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Formats precaution text into an HTML template string with each precaution on a new line.
+         * @param {string} locationName - The full name of the location.
+         * @param {string} precautionText - The precaution text generated by Gemini.
+         * @returns {string} - HTML string representing the precaution card.
+         */
+        function formatPrecautionsAsTemplate(locationName, precautionText) {
+            // Split the text by common sentence endings (. ! ?) followed by a space, or by newlines, then filter out empty strings.
+            // Also split by common list item prefixes like `- ` or `* `.
+            const precautionsList = precautionText
+                .split(/[\.\!\?]\s*|\n|- \s*|\* \s*/)
+                .map(item => item.trim())
+                .filter(item => item.length > 0)
+
+            // Format as an unordered list
+            const listItemsHtml = precautionsList.map(item => `<li>${item}</li>`).join('');
+
+            return `
+                <div class="precaution-card">
+                    <div class="flex items-center mb-2">
+                        <span class="text-2xl mr-2">🚨</span>
+                        <strong class="text-lg">Precautions for ${locationName}</strong>
+                    </div>
+                    <ul class="list-disc ml-4">
+                        ${listItemsHtml}
+                    </ul>
+                </div>
+            `;
+        }
+
+
+        /**
+         * Displays a message in the chat interface, optionally including source links.
+         * @param {string|object} messageContent - The message text (string) or an object {text: string, sources: Array}.
+         * @param {string} sender - 'user' or 'bot'.
+         */
+        function displayMessage(messageContent, sender) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', sender);
+
+            // Extract text and sources from messageContent
+            const messageText = typeof messageContent === 'string' ? messageContent : messageContent.text;
+            const messageSources = typeof messageContent === 'object' && messageContent.sources ? messageContent.sources : [];
+
+            messageElement.innerHTML = messageText;
+
+            // If sources are available, display them as a list
+            if (messageSources.length > 0) {
+                const sourceList = document.createElement('ul');
+                sourceList.classList.add('list-disc', 'list-inside', 'text-sm', 'mt-2', 'text-gray-600');
+                messageSources.forEach(source => {
+                    const listItem = document.createElement('li');
+                    // Create a clickable link for each source
+                    listItem.innerHTML = `<a href="${source.uri}" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">${source.title || 'Link'}</a>`;
+                    sourceList.appendChild(listItem);
+                });
+                messageElement.appendChild(sourceList);
+            }
+
+            chatMessages.appendChild(messageElement);
+            chatMessages.scrollTop = chatMessages.scrollHeight; // Scroll to bottom
+        }
+
+        /**
+         * Shows the loading indicator, indicating the bot is "typing".
+         */
+        function showLoading() {
+            loadingIndicator.classList.remove('hidden');
+            sendButton.disabled = true;
+            userInput.disabled = true;
+        }
+
+        /**
+         * Hides the loading indicator.
+         */
+        function hideLoading() {
+            loadingIndicator.classList.add('hidden');
+            sendButton.disabled = false;
+            userInput.disabled = false;
+            userInput.focus();
+        }
+
+        // --- Real API Functions (using OpenWeatherMap) ---
+
+        /**
+         * Fetches latitude and longitude for a given location name using OpenWeatherMap Geocoding API.
+         * @param {string} locationName - The city, state, or country name.
+         * @returns {Promise<{lat: number, lon: number, name: string, state?: string, country?: string}>} - A promise that resolves with lat/lon and full location details.
+         */
+        async function getCoordinates(locationName) {
+            if (!OPENWEATHER_API_KEY || OPENWEATHER_API_KEY === 'YOUR_OPENWEATHERMAP_API_KEY') {
+                throw new Error("OpenWeatherMap API key is not configured. Please get one from openweathermap.org and update the code.");
+            }
+            const geoApiUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(locationName)}&limit=1&appid=${OPENWEATHER_API_KEY}`;
+            console.log(`Fetching coordinates from: ${geoApiUrl}`);
+
+            const response = await fetch(geoApiUrl);
+            if (!response.ok) {
+                throw new Error(`Geocoding API error: ${response.status} ${response.statusText}`);
+            }
+            const data = await response.json();
+
+            if (data.length > 0) {
+                return { lat: data[0].lat, lon: data[0].lon, name: data[0].name, state: data[0].state, country: data[0].country };
+            } else {
+                throw new Error(`Could not find coordinates for "${locationName}". Please provide a more specific or valid location.`);
+            }
+        }
+
+        /**
+         * Fetches current weather and a 4-day forecast using OpenWeatherMap APIs.
+         * @param {number} lat - Latitude.
+         * @param {number} lon - Longitude.
+         * @returns {Promise<{current: object, fourDayForecast: Array<object>}>} - Current weather and 4-day forecast data.
+         */
+        async function getWeatherAndForecast(lat, lon) {
+            if (!OPENWEATHER_API_KEY || OPENWEATHER_API_KEY === 'YOUR_OPENWEATHERMAP_API_KEY') {
+                throw new Error("OpenWeatherMap API key is not configured. Please get one from openweathermap.org and update the code.");
+            }
+
+            const currentWeatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${OPENWEATHER_API_KEY}&units=metric`;
+            const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${OPENWEATHER_API_KEY}&units=metric`;
+
+            const [currentWeatherResponse, forecastResponse] = await Promise.all([
+                fetch(currentWeatherUrl),
+                fetch(forecastUrl)
+            ]);
+
+            if (!currentWeatherResponse.ok) {
+                throw new Error(`Current weather API error: ${currentWeatherResponse.status} ${currentWeatherResponse.statusText}`);
+            }
+            if (!forecastResponse.ok) {
+                throw new Error(`Forecast API error: ${forecastResponse.status} ${forecastResponse.statusText}`);
+            }
+
+            const currentData = await currentWeatherResponse.json();
+            const forecastData = await forecastResponse.json();
+
+            const current = {
+                temperature: currentData.main.temp,
+                description: currentData.weather[0].description,
+                humidity: currentData.main.humidity,
+                windSpeed: currentData.wind.speed,
+                minMaxTemp: {
+                    min: currentData.main.temp_min,
+                    max: currentData.main.temp_max
+                }
+            };
+
+            const dailyForecasts = {};
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // Process forecast data for the next 4 days (excluding current day)
+            for (const item of forecastData.list) {
+                const itemDate = new Date(item.dt * 1000);
+                itemDate.setHours(0, 0, 0, 0); // Normalize to start of day
+
+                // Calculate the difference in days from today
+                const diffTime = Math.abs(itemDate.getTime() - today.getTime());
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                // We want forecasts for day +1 to day +4 (tomorrow to 4 days from now)
+                if (diffDays >= 1 && diffDays <= 4) {
+                    const dateKey = itemDate.toISOString().split('T')[0]; // YYYY-MM-DD
+                    if (!dailyForecasts[dateKey]) {
+                        dailyForecasts[dateKey] = {
+                            date: itemDate,
+                            temps: [],
+                            descriptions: [],
+                            minMaxTemp: { min: Infinity, max: -Infinity }
+                        };
+                    }
+                    dailyForecasts[dateKey].temps.push(item.main.temp);
+                    dailyForecasts[dateKey].descriptions.push(item.weather[0].description);
+                    if (item.main.temp_min < dailyForecasts[dateKey].minMaxTemp.min) dailyForecasts[dateKey].minMaxTemp.min = item.main.temp_min;
+                    if (item.main.temp_max > dailyForecasts[dateKey].minMaxTemp.max) dailyForecasts[dateKey].minMaxTemp.max = item.main.temp_max;
+                }
+            }
+
+            const fourDayForecast = Object.keys(dailyForecasts)
+                .sort() // Sort by date
+                .slice(0, 4) // Ensure we only take the next 4 days
+                .map(dateKey => {
+                    const dayData = dailyForecasts[dateKey];
+                    const avgTemp = dayData.temps.reduce((a, b) => a + b, 0) / dayData.temps.length;
+
+                    // Find most frequent description
+                    const descriptionCounts = {};
+                    dayData.descriptions.forEach(desc => {
+                        descriptionCounts[desc] = (descriptionCounts[desc] || 0) + 1;
+                    });
+                    const mostFrequentDescription = Object.keys(descriptionCounts).reduce((a, b) =>
+                        descriptionCounts[a] > descriptionCounts[b] ? a : b
+                    );
+
+                    return {
+                        date: dayData.date,
+                        temperature: avgTemp,
+                        description: mostFrequentDescription,
+                        minMaxTemp: dayData.minMaxTemp
+                    };
+                });
+
+            return { current, fourDayForecast };
+        }
+
+        // --- LLM Interaction Function ---
+
+        /**
+         * Calls the Gemini API to get a conversational response, optionally using Google Search.
+         * Includes exponential backoff for retries.
+         * @param {string} userPrompt - The user's input for the current turn.
+         * @param {Array} currentChatHistoryForLLM - The conversation history to send to Gemini (including current user prompt).
+         * @param {boolean} [useSearch=false] - Whether to enable Google Search grounding for this request.
+         * @param {number} [retries=0] - Number of retry attempts (for exponential backoff).
+         * @returns {Promise<{text: string, sources: Array}>} - The bot's response text and any grounding sources.
+         */
+        async function getGeminiChatResponse(userPrompt, currentChatHistoryForLLM, useSearch = false, retries = 0) {
+            const systemPrompt = `You are a friendly and helpful weather chatbot.
+            Your main goal is to provide weather forecasts when given a city, state, or country name.
+            If the user asks for weather and you have the data, format the response clearly and concisely, including current and a 4-day forecast.
+            If the user asks about precautions for the weather, provide relevant safety tips.
+            If the user asks for news or links about weather, use Google Search to find and present relevant news articles.
+            If the location is not found, politely ask for a different, valid location.
+            If the user just greets you or asks a general question, respond courteously.
+            Keep your responses brief and to the point.
+            You can use emojis in your responses.`;
+
+            const payload = {
+                contents: currentChatHistoryForLLM, // History already includes the current user prompt
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+            };
+
+            // Add the google_search tool if requested
+            if (useSearch) {
+                payload.tools = [{ "google_search": {} }];
+            }
+
+            try {
+                const response = await fetch(GEMINI_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    // Implement exponential backoff for rate limiting (HTTP 429)
+                    if (response.status === 429 && retries < 5) {
+                        const delay = Math.pow(2, retries) * 1000 + Math.random() * 1000;
+                        console.warn(`Rate limit hit, retrying in ${delay / 1000}s...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        return getGeminiChatResponse(userPrompt, currentChatHistoryForLLM, useSearch, retries + 1);
+                    }
+                    throw new Error(`API error: ${response.status} ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!text) {
+                    throw new Error("No text content in Gemini response.");
+                }
+
+                // Extract grounding sources if search was used
+                let sources = [];
+                const groundingMetadata = result.candidates?.[0]?.groundingMetadata;
+                if (useSearch && groundingMetadata && groundingMetadata.groundingAttributions) {
+                    sources = groundingMetadata.groundingAttributions
+                        .map(attribution => ({
+                            uri: attribution.web?.uri,
+                            title: attribution.web?.title,
+                        }))
+                        .filter(source => source.uri && source.title); // Filter out invalid sources
+                }
+                return { text, sources };
+
+            } catch (error) {
+                console.error("Error calling Gemini API:", error);
+                return { text: "I'm having trouble connecting right now. Please try again later.", sources: [] };
+            }
+        }
+
+        // --- Main Chat Logic ---
+
+        /**
+         * Processes the user's message, determines intent, fetches data, and generates bot response.
+         */
+        async function processUserMessage() {
+            const userText = userInput.value.trim();
+            if (!userText) return; // Do nothing if input is empty
+
+            showLoading(); // Show typing indicator
+
+            try {
+                const lowerCaseUserText = userText.toLowerCase();
+                // Attempt to extract a location name from the user's input
+                const locationMatch = lowerCaseUserText.match(/(?:in|for|of)\s+([a-zA-Z\s-]+?)(?:\?|[\.,!]|$)/i);
+                let locationName = null;
+
+                if (locationMatch && locationMatch[1]) {
+                    locationName = locationMatch[1].trim();
+                } else if (userText.length > 3 && !lowerCaseUserText.includes('weather') && !lowerCaseUserText.includes('hi')) {
+                    // Fallback: if it's not a short greeting/general weather query, assume it's a direct location input
+                    locationName = userText.trim();
+                }
+
+                let botResponseContent; // Object to store { text, sources }
+                // Prepare chat history including the current user message for the LLM call
+                let currentChatHistoryForLLM = [...chatHistory, { role: "user", parts: [{ text: userText }] }];
+
+                // Check for specific intent keywords
+                const needsPrecautions = lowerCaseUserText.includes('precautions') || lowerCaseUserText.includes('safety') || lowerCaseUserText.includes('what to do') || lowerCaseUserText.includes('how to stay safe');
+                const needsLinks = lowerCaseUserText.includes('links') || lowerCaseUserText.includes('updates') || lowerCaseUserText.includes('news');
+                // The 'asksForTomorrow' intent is now implicitly covered by the 4-day forecast, but keeping it for context
+                const asksForForecast = lowerCaseUserText.includes('forecast') || lowerCaseUserText.includes('weather');
+
+
+                if (locationName) {
+                    try {
+                        const coords = await getCoordinates(locationName);
+                        // Fetch current and 4-day forecast data
+                        const { current, fourDayForecast } = await getWeatherAndForecast(coords.lat, coords.lon);
+
+                        // Construct a full location name for better user display
+                        const fullLocationName = coords.name + (coords.state ? `, ${coords.state}` : '') + (coords.country ? `, ${coords.country}` : '');
+
+                        if (needsLinks) {
+                            // If user asks for links, use Google Search
+                            const searchPrompt = `Find current weather news and updates for ${fullLocationName}. Provide relevant links.`;
+                            botResponseContent = await getGeminiChatResponse(searchPrompt, currentChatHistoryForLLM, true); // Enable search tool
+                        } else if (needsPrecautions) {
+                            // If user asks for precautions, prompt Gemini for safety tips
+                            const precautionPrompt = `Based on the current weather in ${fullLocationName} which is ${current.temperature}°C and ${current.description}, what safety precautions or tips should be shared? Respond with clear, concise bullet points or a short paragraph.`;
+                            const geminiPrecautions = await getGeminiChatResponse(precautionPrompt, currentChatHistoryForLLM);
+                            // Format Gemini's text into the precaution card
+                            botResponseContent = {
+                                text: formatPrecautionsAsTemplate(fullLocationName, geminiPrecautions.text),
+                                sources: []
+                            };
+                        } else {
+                            // Default: provide current and 4-day weather summary using the template
+                            botResponseContent = {
+                                text: formatWeatherAsTemplate(fullLocationName, current, fourDayForecast),
+                                sources: []
+                            };
+                        }
+
+                    } catch (geoOrWeatherError) {
+                        // Handle errors from geocoding or weather API calls
+                        console.error("Geocoding or Weather fetching error:", geoOrWeatherError);
+                        const errorPrompt = `${geoOrWeatherError.message}. Please generate a polite message asking the user for a more precise or valid city, state, or country name.`;
+                        botResponseContent = await getGeminiChatResponse(errorPrompt, currentChatHistoryForLLM);
+                    }
+                } else {
+                    // If no specific location was found in the user's input
+                    if (needsLinks || needsPrecautions || asksForForecast) {
+                        // If user asks for specific weather features without a location, ask for location first
+                        const prompt = "Please tell me the city, state, or country you are interested in first to get specific information.";
+                        botResponseContent = await getGeminiChatResponse(prompt, currentChatHistoryForLLM);
+                    } else {
+                        // General chat without requiring a location
+                        botResponseContent = await getGeminiChatResponse(userText, currentChatHistoryForLLM);
+                    }
+                }
+
+                // Add user's message to chat history for display
+                displayMessage(userText, 'user');
+                chatHistory.push({ role: "user", parts: [{ text: userText }] });
+
+                // Display bot's response and add its text to chat history for future context
+                displayMessage(botResponseContent, 'bot');
+                chatHistory.push({ role: "model", parts: [{ text: botResponseContent.text }] });
+
+            } catch (error) {
+                console.error("Overall error in processUserMessage:", error);
+                const errorBotResponse = { text: "Oops! Something went wrong on my end. Please try again.", sources: [] };
+                displayMessage(userText, 'user'); // Display user's input even if overall error
+                chatHistory.push({ role: "user", parts: [{ text: userText }] });
+                displayMessage(errorBotResponse, 'bot');
+                chatHistory.push({ role: "model", parts: [{ text: errorBotResponse.text }] });
+            } finally {
+                hideLoading(); // Always hide loading indicator
+            }
+        }
+
+        // --- Event Listeners ---
+
+        sendButton.addEventListener('click', processUserMessage);
+        userInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                processUserMessage();
+            }
+        });
+
+        // Set initial welcome message on page load
+        window.onload = () => {
+            userInput.focus();
+        };
+
+    </script>
+</body>
+</html>

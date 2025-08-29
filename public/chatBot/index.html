@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <!-- 🌤️ Weather Chatbot Widget -->
+<style>
+  /* Floating chatbot button */
+  #chatbot-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: #2563eb;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    transition: transform 0.2s ease;
+    z-index: 9999;
+  }
+  #chatbot-button:hover {
+    transform: scale(1.1);
+  }
+
+  /* Chatbot container */
+  #chatbot-container {
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    width: 380px;
+    max-height: 80vh;
+    background: white;
+    border-radius: 1rem;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.25);
+    overflow: hidden;
+    display: none;
+    flex-direction: column;
+    z-index: 9999;
+  }
+  #chatbot-header {
+    background-color: #2563eb;
+    color: white;
+    padding: 12px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  #chatbot-header button {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+  }
+  #chatbot-iframe {
+    width: 100%;
+    height: 500px;
+    border: none;
+  }
+</style>
+
+<!-- Floating Chatbot Button -->
+<div id="chatbot-button">💬</div>
+
+<!-- Chatbot Popup -->
+<div id="chatbot-container">
+  <div id="chatbot-header">
+    <!-- Weather Bot 🌤️ -->
+    <button id="close-chatbot">&times;</button>
+  </div>
+  <iframe id="chatbot-iframe" src="chatbot.html"></iframe>
+</div>
+
+<script>
+  const chatbotBtn = document.getElementById('chatbot-button');
+  const chatbotContainer = document.getElementById('chatbot-container');
+  const closeBtn = document.getElementById('close-chatbot');
+
+  chatbotBtn.addEventListener('click', () => {
+    chatbotContainer.style.display = 'flex';
+  });
+
+  closeBtn.addEventListener('click', () => {
+    chatbotContainer.style.display = 'none';
+  });
+</script>
+
+</body>
+</html>

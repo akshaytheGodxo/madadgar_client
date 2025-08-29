@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>India Weather Map — Low Requests</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    :root {
+      --bg: #0b1220; --panel: #121a2b; --text: #e7eefc; --muted: #9db0d1; --accent: #3aa0ff;
+    }
+    body { margin:0; background:var(--bg); color:var(--text); font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    #map { height: calc(100vh - 64px); width: 100%; }
+    .topbar {
+      height:64px; display:flex; gap:12px; align-items:center; padding:0 16px; background:var(--panel);
+      position:sticky; top:0; z-index:1000; border-bottom:1px solid rgba(255,255,255,0.06);
+    }
+    .title { font-weight:700; letter-spacing:.3px; }
+    .spacer { flex:1; }
+    .btn {
+      border:1px solid rgba(255,255,255,0.15); background:transparent; color:var(--text);
+      padding:8px 12px; border-radius:10px; cursor:pointer; transition:.2s; font-weight:600;
+    }
+    .btn:hover { border-color: var(--accent); box-shadow:0 0 0 2px rgba(58,160,255,0.15) inset; }
+    .pill { color: var(--muted); font-size:12px; }
+    .legend {
+      position: absolute; bottom: 16px; right: 16px; background: rgba(0,0,0,0.6);
+      color:#fff; padding:10px 12px; border-radius:12px; backdrop-filter: blur(6px);
+    }
+    .red-zone { background: #d62828; color: #fff; padding: 2px 6px; border-radius: 6px; font-weight:700; }
+    .leaflet-popup-content { color:#111; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="title">🇮🇳 India Weather Map — Rain Heatmap & Red Zones</div>
+    <div class="pill" id="status">Status: idle</div>
+    <div class="spacer"></div>
+    <div class="pill" id="lastUpdated">Last updated: —</div>
+    <button class="btn" id="refreshBtn">🔄 Refresh Weather</button>
+  </div>
+
+  <div id="map"></div>
+  <div class="legend">
+    <div><strong>Heatmap:</strong> Rainfall intensity (mm/h)</div>
+    <div><span class="red-zone">RED ZONE</span> → Rain &gt; 20 mm/h or Pressure &lt; 1000 hPa</div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+  <script>
+    // ====== CONFIG ======
+    const API_KEY = "8ed415630504dcebe83d207b0422869b"; // ← replace with your weather API key
+    const CACHE_MINUTES = 30;       // cache duration
+    const RED_RAIN = 20;            // mm in last 1h
+    const RED_PRESSURE = 1000;      // hPa
+
+    // ====== CAPITALS (States + UTs, + Jammu winter) ======
+    // 28 States:
+    const capitals = [
+      // Andhra Pradesh
+      { state:"Andhra Pradesh", name:"Amaravati", lat:16.5730, lon:80.3580 },
+      { state:"Arunachal Pradesh", name:"Itanagar", lat:27.0844, lon:93.6053 },
+      { state:"Assam", name:"Dispur", lat:26.1408, lon:91.7900 },
+      { state:"Bihar", name:"Patna", lat:25.5941, lon:85.1376 },
+      { state:"Chhattisgarh", name:"Raipur", lat:21.2514, lon:81.6296 },
+      { state:"Goa", name:"Panaji", lat:15.4909, lon:73.8278 },
+      { state:"Gujarat", name:"Gandhinagar", lat:23.2156, lon:72.6369 },
+      { state:"Haryana", name:"Chandigarh", lat:30.7333, lon:76.7794 },
+      { state:"Himachal Pradesh", name:"Shimla", lat:31.1048, lon:77.1734 },
+      { state:"Jharkhand", name:"Ranchi", lat:23.3441, lon:85.3096 },
+      { state:"Karnataka", name:"Bengaluru", lat:12.9716, lon:77.5946 },
+      { state:"Kerala", name:"Thiruvananthapuram", lat:8.5241, lon:76.9366 },
+      { state:"Madhya Pradesh", name:"Bhopal", lat:23.2599, lon:77.4126 },
+      { state:"Maharashtra", name:"Mumbai", lat:19.0760, lon:72.8777 },
+      { state:"Manipur", name:"Imphal", lat:24.8170, lon:93.9368 },
+      { state:"Meghalaya", name:"Shillong", lat:25.5788, lon:91.8933 },
+      { state:"Mizoram", name:"Aizawl", lat:23.7271, lon:92.7176 },
+      { state:"Nagaland", name:"Kohima", lat:25.6751, lon:94.1086 },
+      { state:"Odisha", name:"Bhubaneswar", lat:20.2961, lon:85.8245 },
+      { state:"Punjab", name:"Chandigarh", lat:30.7333, lon:76.7794 },
+      { state:"Rajasthan", name:"Jaipur", lat:26.9124, lon:75.7873 },
+      { state:"Sikkim", name:"Gangtok", lat:27.3389, lon:88.6065 },
+      { state:"Tamil Nadu", name:"Chennai", lat:13.0827, lon:80.2707 },
+      { state:"Telangana", name:"Hyderabad", lat:17.3850, lon:78.4867 },
+      { state:"Tripura", name:"Agartala", lat:23.8315, lon:91.2868 },
+      { state:"Uttar Pradesh", name:"Lucknow", lat:26.8467, lon:80.9462 },
+      { state:"Uttarakhand", name:"Dehradun", lat:30.3165, lon:78.0322 },
+      { state:"West Bengal", name:"Kolkata", lat:22.5726, lon:88.3639 },
+      // 8 Union Territories:
+      { state:"Andaman & Nicobar Islands", name:"Port Blair", lat:11.6234, lon:92.7265 },
+      { state:"Chandigarh (UT)", name:"Chandigarh", lat:30.7333, lon:76.7794 },
+      { state:"Dadra & Nagar Haveli and Daman & Diu", name:"Daman", lat:20.3974, lon:72.8328 },
+      { state:"Delhi (NCT)", name:"New Delhi", lat:28.6139, lon:77.2090 },
+      { state:"Jammu & Kashmir (UT) — Summer", name:"Srinagar", lat:34.0837, lon:74.7973 },
+      { state:"Jammu & Kashmir (UT) — Winter", name:"Jammu", lat:32.7266, lon:74.8570 },
+      { state:"Ladakh (UT)", name:"Leh", lat:34.1526, lon:77.5770 },
+      { state:"Lakshadweep (UT)", name:"Kavaratti", lat:10.5667, lon:72.6369 },
+      { state:"Puducherry (UT)", name:"Puducherry", lat:11.9416, lon:79.8083 },
+    ];
+
+    // ====== MAP ======
+    const map = L.map('map', { zoomControl: true }).setView([22.9734, 78.6569], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 10,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    let heatLayer = null;
+    let cityMarkers = [];
+
+    // ====== CACHE HELPERS ======
+    const memCache = {}; // in-memory
+    const cacheKey = (lat, lon) => `wx:${lat.toFixed(4)},${lon.toFixed(4)}`;
+    const isFresh = ts => (Date.now() - ts) < (CACHE_MINUTES * 60 * 1000);
+
+    function readCache(lat, lon) {
+      const key = cacheKey(lat, lon);
+      const raw = localStorage.getItem(key);
+      if (!raw) return null;
+      try {
+        const obj = JSON.parse(raw);
+        return isFresh(obj.time) ? obj.data : null;
+      } catch { return null; }
+    }
+    function writeCache(lat, lon, data) {
+      const key = cacheKey(lat, lon);
+      const obj = { time: Date.now(), data };
+      localStorage.setItem(key, JSON.stringify(obj));
+      memCache[key] = obj;
+    }
+
+    // ====== FETCH WEATHER ======
+    async function fetchWeather(lat, lon) {
+      const key = cacheKey(lat, lon);
+      if (memCache[key] && isFresh(memCache[key].time)) return memCache[key].data;
+      const ls = readCache(lat, lon);
+      if (ls) return (memCache[key] = { time: Date.now(), data: ls }, ls);
+
+      const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      writeCache(lat, lon, data);
+      return data;
+    }
+
+    // ====== UI ======
+    const statusEl = document.getElementById('status');
+    const lastUpdatedEl = document.getElementById('lastUpdated');
+    const refreshBtn = document.getElementById('refreshBtn');
+
+    function setStatus(txt) { statusEl.textContent = `Status: ${txt}`; }
+    function setUpdated(ts) {
+      const d = new Date(ts);
+      lastUpdatedEl.textContent = `Last updated: ${d.toLocaleString()}`;
+    }
+
+    // ====== RENDER ======
+    async function renderWeather(force = false) {
+      setStatus('loading…');
+
+      // Clear previous layers
+      if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
+      cityMarkers.forEach(m => map.removeLayer(m));
+      cityMarkers = [];
+
+      const heatPoints = [];
+      let updatedAt = Date.now();
+
+      for (const city of capitals) {
+        try {
+          if (force) { // bust cache for a true refresh
+            localStorage.removeItem(cacheKey(city.lat, city.lon));
+          }
+          const data = await fetchWeather(city.lat, city.lon);
+          // Extract fields safely
+          const temp = data?.main?.temp ?? null;
+          const pressure = data?.main?.pressure ?? null;
+          const humidity = data?.main?.humidity ?? null;
+          const cond = data?.weather?.[0]?.description ?? 'N/A';
+          const rain1h = (data?.rain && (data.rain['1h'] ?? data.rain['3h'] ?? 0)) || 0;
+
+          // Heatmap intensity by rainfall (normalize: cap at 50 mm/h)
+          const intensity = Math.min(rain1h, 50) / 50;
+          heatPoints.push([city.lat, city.lon, intensity]);
+
+          const isRed = (rain1h > RED_RAIN) || (pressure !== null && pressure < RED_PRESSURE);
+
+          const marker = L.circleMarker([city.lat, city.lon], {
+            radius: 6, weight: 1,
+            color: isRed ? '#d62828' : '#2e6cff',
+            fillColor: isRed ? '#d62828' : '#2e6cff',
+            fillOpacity: 0.85
+          }).addTo(map);
+
+          const popupHtml = `
+            <b>${city.name}</b> — <i>${city.state}</i><br/>
+            🌡 Temp: ${temp !== null ? temp.toFixed(1)+'°C' : '—'}<br/>
+            💧 Humidity: ${humidity ?? '—'}%<br/>
+            📉 Pressure: ${pressure ?? '—'} hPa<br/>
+            🌦 Condition: ${cond}<br/>
+            ☔ Rain (1h): ${rain1h} mm<br/>
+            ${isRed ? '<span class="red-zone">🚨 RED ZONE</span>' : ''}
+          `;
+          marker.bindPopup(popupHtml);
+          cityMarkers.push(marker);
+        } catch (err) {
+          console.warn('Weather fetch failed for', city.name, err);
+        }
+      }
+
+      heatLayer = L.heatLayer(heatPoints, { radius: 26, blur: 16, maxZoom: 6 }).addTo(map);
+      setUpdated(updatedAt);
+      setStatus('ready');
+    }
+
+    refreshBtn.addEventListener('click', () => renderWeather(true));
+
+    // Initial render (from cache when possible)
+    renderWeather(false);
+  </script>
+</body>
+</html>
