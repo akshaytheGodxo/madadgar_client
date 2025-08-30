@@ -5,6 +5,7 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { doc, setDoc } from "firebase/firestore";
 export default function SignUp() {
+    const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
     const [type, setType] = useState("individual");
     const [password, setPassword] = useState("");
@@ -25,16 +26,28 @@ export default function SignUp() {
             setLoading(true);
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
+            if (type === "individual") {
+                await setDoc(doc(db, "users", user.uid), {
+                    name: username,
+                    email: user.email,
+                    type: type,
+                    modulesCompleted: 0,
+                    createdAt: new Date()
+                })
+            } else if (type === "organization") {
+                await setDoc(doc(db, "users", user.uid), {
+                    name: username,
+                    email: user.email,
+                    type: type,
+                    currentStudents: [],
+                    pendingRequests: [],
+                    createdAt: new Date()
 
-            await setDoc(doc(db, "users", user.uid), {
-                email: user.email,
-                type: type,
-                currentBadges: 0,
-                createdAt: new Date()
-            })
+                })
+            }
             console.log("User signed up:", user);
 
-            router.push("/dashboard?tab=home"); 
+            router.push("/dashboard?tab=home");
         } catch (err: any) {
             console.error("Signup error:", err.message);
             setError(err.message);
@@ -82,6 +95,14 @@ export default function SignUp() {
                             </div>
                             <p className="text-gray-400 my-3">or use your email for registration</p>
                             <div className="flex flex-col items-center">
+                                <input 
+                                    type="text"
+                                    placeholder="Username"
+                                    className="border-2 border-gray-200 rounded-xl p-3 w-80 my-2"
+                                    value={username}
+                                    onChange={(e)=>setUsername(e.target.value)}
+                                />
+
                                 <input
                                     type="email"
                                     placeholder="Email"
