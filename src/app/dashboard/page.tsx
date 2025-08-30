@@ -18,6 +18,12 @@ export default function Dashboard() {
             {tab === "settings"}
             {tab === "choose_org" && (<ChooseOrg />)}
             {tab === "pending" && (<Pending />)}
+
+
+            <iframe
+                src="/chatBot/index.html"
+                className="fixed bottom-4 right-4 w-[400px] h-[500px] "
+            ></iframe>
         </div>
     );
 }
