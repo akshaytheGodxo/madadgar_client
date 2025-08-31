@@ -7,34 +7,32 @@ export default function Home() {
           🌍 Live Weather Map
         </h1>
         <p className="text-gray-300">
-          Explore real-time weather updates across the globe
+          Explore real-time weather updates and disaster risks worldwide
         </p>
       </div>
 
-      {/* Map Container */}
-      <div className="w-full max-w-6xl mx-auto bg-black rounded-2xl shadow-xl overflow-hidden border border-green-500">
+      {/* Weather Map */}
+      <div className="w-full max-w-6xl mx-auto mb-10 bg-black rounded-2xl shadow-xl overflow-hidden border border-green-500">
         <iframe
           src="/map/index2.html"
           className="w-full h-[600px]"
         />
       </div>
 
-      {/* Extra Section */}
-      <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-        <div className="bg-black rounded-2xl shadow-md p-6 border border-green-500">
-          <h2 className="text-xl font-bold text-green-500 mb-2">📍 Location</h2>
-          <p className="text-gray-300">Track live weather data for your area or any region in real time.</p>
+      {/* Disaster Risk Map */}
+      <div className="w-full max-w-6xl mx-auto bg-black rounded-2xl shadow-xl overflow-hidden border border-red-500">
+        <div className="p-4 bg-gray-900 text-center">
+          <h2 className="text-2xl font-bold text-red-400 mb-2">
+            ⚠ Disaster Risk Zones
+          </h2>
+          <p className="text-gray-300 text-sm">
+            Visualize potential hazards and risk-prone areas
+          </p>
         </div>
-
-        <div className="bg-black rounded-2xl shadow-md p-6 border border-green-500">
-          <h2 className="text-xl font-bold text-green-500 mb-2">⛅ Weather Layers</h2>
-          <p className="text-gray-300">Overlay temperature, precipitation, and wind layers for deeper insights.</p>
-        </div>
-
-        <div className="bg-black rounded-2xl shadow-md p-6 border border-green-500">
-          <h2 className="text-xl font-bold text-green-500 mb-2">⚡ Alerts</h2>
-          <p className="text-gray-300">Get notified about severe weather conditions in your region instantly.</p>
-        </div>
+        <iframe
+          src="/disasterMap/index.html"
+          className="w-full h-[600px]"
+        />
       </div>
     </div>
   )

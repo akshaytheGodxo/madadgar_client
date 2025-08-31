@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>India Disaster Prediction & Risk Zones</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🇮🇳 India Disaster Prediction System</h1>
+            <p>Real-time disaster risk monitoring for floods, earthquakes, and landslides</p>
+        </div>
+
+        <div class="alert-banner" id="alertBanner">
+            <strong>⚠️ High Risk Alert:</strong> <span id="alertMessage"></span>
+        </div>
+
+        <div class="dashboard">
+            <div class="sidebar">
+                <button class="location-btn" onclick="getCurrentLocation()">
+                    📍 Get My Location & Check Risk
+                </button>
+
+                <div id="locationInfo" class="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Detecting location and analyzing risks...</p>
+                </div>
+
+                <div class="disaster-cards" id="disasterCards">
+                    <!-- Disaster cards will be populated here -->
+                </div>
+
+                <div class="legend">
+                    <h3>Risk Zone Legend</h3>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: rgba(76, 175, 80, 0.3);"></div>
+                        <span>Safe Zone (Low Risk)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: rgba(255, 152, 0, 0.3);"></div>
+                        <span>Caution Zone (Medium Risk)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: rgba(244, 67, 54, 0.3);"></div>
+                        <span>Danger Zone (High Risk)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: rgba(156, 39, 176, 0.3);"></div>
+                        <span>Critical Zone (Extreme Risk)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="map-container">
+                <div id="map"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="config.js"></script>
+    <script src="disasterData.js"></script>
+    <script src="apiService.js"></script>
+    <script src="mapController.js"></script>
+    <script src="riskCalculator.js"></script>
+    <script src="uiController.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
