@@ -6,6 +6,7 @@ import Drills from "./akshansh_to_do/drills";
 import ChooseOrg from "./akshansh_to_do/choose_org";
 import Pending from "./akshansh_to_do/Pending";
 import Games from "./akshansh_to_do/games";
+import TrackStudents from "./akshansh_to_do/track_students";
 
 
 
@@ -21,7 +22,7 @@ export default function Dashboard() {
             {tab === "settings"}
             {tab === "choose_org" && (<ChooseOrg />)}
             {tab === "pending" && (<Pending />)}
-
+            {tab === "track_students" && (<TrackStudents />)}
 
             <iframe
                 src="/chatBot/index.html"

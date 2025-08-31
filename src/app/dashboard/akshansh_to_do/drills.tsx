@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { db } from "@/lib/firebase";
+import { doc, updateDoc, increment } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 
 type Video = {
   id: string;
@@ -135,7 +138,9 @@ function VideoSection({
                 disabled={completed.includes(video.id)}
                 className="w-full"
               >
-                {completed.includes(video.id) ? "✅ Completed" : "Mark as Completed"}
+                {completed.includes(video.id)
+                  ? "✅ Completed"
+                  : "Mark as Completed"}
               </Button>
             </CardContent>
           </Card>
@@ -148,9 +153,24 @@ function VideoSection({
 export default function Drills() {
   const [completed, setCompleted] = useState<string[]>([]);
 
-  const markCompleted = (id: string) => {
+  const markCompleted = async (id: string) => {
     if (!completed.includes(id)) {
-      setCompleted((prev) => [...prev, id]);
+      try {
+        const auth = getAuth();
+        const user = auth.currentUser;
+        if (!user) return alert("You must be logged in");
+
+        const userRef = doc(db, "users", user.uid);
+
+        // increment currentBadges by 1
+        await updateDoc(userRef, {
+          currentBadges: increment(1),
+        });
+
+        setCompleted((prev) => [...prev, id]);
+      } catch (err) {
+        console.error("Error updating badges:", err);
+      }
     }
   };
 

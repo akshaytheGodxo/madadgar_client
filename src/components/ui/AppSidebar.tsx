@@ -104,6 +104,13 @@ export function AppSidebar() {
           Pending Requests
           </Button></div>}
 
+      {!isIndividual && (
+        <div className="items-center justify-center p-4">
+          <Button onClick={() => router.push("/dashboard?tab=track_students")} className="bg-gray-400 w-full h-12 rounded-lg cursor-pointer text-white">
+            Track Students
+          </Button>
+        </div>
+      )}
       <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
         <p className="text-sm font-medium text-gray-700">{authDetails?.email}</p>
         <p className="text-xs text-gray-500">Logged in</p>
