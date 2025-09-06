@@ -7,6 +7,7 @@ import ChooseOrg from "./akshansh_to_do/choose_org";
 import Pending from "./akshansh_to_do/Pending";
 import Games from "./akshansh_to_do/games";
 import TrackStudents from "./akshansh_to_do/track_students";
+import NewHome from "./another/new_home";
 
 
 
@@ -15,7 +16,7 @@ export default function Dashboard() {
     const tab = searchParams.get("tab");
     return (
         <div className=" w-full h-screen p-6 bg-gray-50">
-            {tab === "home" && (<Home />)}
+            {tab === "home" && (<NewHome />)}
             {tab === "drills" && (<Drills />)}
             {tab === "games" && (<Games />)}
             {tab === "connect"}
